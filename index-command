@@ -3,13 +3,9 @@ cat << EOF > output-image/index.json
   "schemaVersion": 2,
   "manifests": [
     {
-      "mediaType": "application/vnd.oci.image.manifest.v1+json",
-      "digest": "sha256:${manifest_checksum}",
-      "size": ${manifest_size},
-      "platform": {
-        "architecture": "amd64",
-        "os": "linux"
-      }
+      "mediaType": "application/vnd.oci.image.index.v1+json",
+      "digest": "sha256:${index_checksum}",
+      "size": ${index_size}
     }
   ]
 }

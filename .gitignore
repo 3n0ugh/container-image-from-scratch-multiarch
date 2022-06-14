@@ -1,2 +1,4 @@
 bin
 output-image
+bin-amd64/
+bin-arm64/
