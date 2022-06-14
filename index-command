@@ -7,7 +7,7 @@ cat << EOF > output-image/index.json
       "digest": "sha256:${manifest_checksum}",
       "size": ${manifest_size},
       "platform": {
-        "architecture": "arm64",
+        "architecture": "amd64",
         "os": "linux"
       }
     }

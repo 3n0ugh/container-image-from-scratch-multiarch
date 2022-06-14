@@ -1,12 +1,13 @@
 cat << EOF > output-image/config.json
 {
-    "architecture": "arm64",
+    "architecture": "amd64",
     "os": "linux",
     "config": {
         "Env": [
             "PATH=/bin"
         ],
-        "WorkingDir": "/"
+        "WorkingDir": "/",
+        "Entrypoint": [ "hello-amd64" ]
     },
     "rootfs": {
         "type": "layers",

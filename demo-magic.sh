@@ -39,7 +39,7 @@ COLOR_RESET="\033[0m"
 C_NUM=0
 
 # prompt and command color which can be overriden
-DEMO_PROMPT="${CYAN}➜ kubecon-demo ${COLOR_RESET}"
+DEMO_PROMPT="${CYAN}➜ cloudnativetr ${COLOR_RESET}"
 DEMO_CMD_COLOR=$WHITE
 DEMO_COMMENT_COLOR=$GREY
 

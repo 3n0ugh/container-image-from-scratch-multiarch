@@ -1,9 +1,0 @@
-ls
-echo
-mkdir
-rm
-rmdir
-whoami
-env
-sh
-cat

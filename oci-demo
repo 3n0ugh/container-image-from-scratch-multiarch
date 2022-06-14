@@ -3,18 +3,15 @@ set -e
 
 source demo-magic.sh
 
-function create_busybox_bin_dir() {
-  mkdir -p bin
-  echo "Downloading busybox..."
-  test -f bin/busybox || ( cd bin && wget https://busybox.net/downloads/binaries/1.35.0-x86_64-linux-musl/busybox )
-  echo "Creating symlinks..."
-  while read com; do
-    ( cd bin && rm -f $com && ln -s busybox $com )
-  done <commands.txt
+function build_hello() {
+
+  echo "Compiling amd64..."
+  just build-amd64-binary
+  echo "Done!"
   echo "Done!"
 }
 
-pe "create_busybox_bin_dir"
+pe "ls -l bin"
 pe "ls -l bin"
 
 rm -rf output-image
@@ -37,6 +34,7 @@ pe "$(<config-command)"
 pe 'config_checksum=$(shasum -a 256 output-image/config.json | cut -d" " -f1)'
 pe "config_size=\$(wc -c output-image/config.json | awk '{print \$1}')"
 pe 'mv output-image/config.json output-image/blobs/sha256/$config_checksum'
+pe 'ls output-image/blobs/sha256/$config_checksum'
 pe '# Creating the manifest blob!'
 pe "$(<manifest-command)"
 pe 'manifest_checksum=$(shasum -a 256 output-image/manifest.json | cut -d" " -f1)'
@@ -48,4 +46,4 @@ pe "echo '{\"imageLayoutVersion\":\"1.0.0\"}' > output-image/oci-layout"
 pe '# Pushing the image out to a registry!'
 pe "crane push output-image localhost:5001/output-image"
 pe "# Let's run it!"
-pe "docker run -it --pull always localhost:5001/output-image sh"
+pe "docker run -it --pull always localhost:5001/output-image"
