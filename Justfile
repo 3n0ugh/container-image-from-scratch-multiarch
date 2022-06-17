@@ -1,5 +1,8 @@
 registry:
-  docker run -d -p 5000:5000 --restart=always --name registry registry:2
+  docker run --rm -d -p 5001:5000 --name registry registry:2
 
 build-amd64-binary:
-    GOOS=linux GOARCH=amd64 go build -o bin/hello-amd64 app/main.go
+    GOOS=linux GOARCH=amd64 go build -o bin-amd64/hello app/main.go
+
+build-arm64-binary:
+    GOOS=linux GOARCH=arm64 go build -o bin-arm64/hello app/main.go

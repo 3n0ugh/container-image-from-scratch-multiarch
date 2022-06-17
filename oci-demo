@@ -8,42 +8,90 @@ function build_hello() {
   echo "Compiling amd64..."
   just build-amd64-binary
   echo "Done!"
+  echo "Compiling arm64..."
+  just build-arm64-binary
   echo "Done!"
 }
 
-pe "ls -l bin"
-pe "ls -l bin"
+build_hello
+
+pe "ls -l bin-amd64"
+pe "ls -l bin-arm64"
 
 rm -rf output-image
 rm -rf temp
 
 pe "# Creating the OCI image layout"
 pe "mkdir -p output-image"
-pe "# Creating the layer"
-pe "tar cf output-image/layer.tar.gz bin"
-pe "tar tf output-image/layer.tar.gz"
-pe 'layer_checksum=$(shasum -a 256 output-image/layer.tar.gz | cut -d" " -f1)'
-pe "layer_size=\$(wc -c output-image/layer.tar.gz | awk '{print \$1}')"
-pe 'echo $layer_checksum $layer_size'
+
+pe "# amd64: Creating the layer"
+pe "tar cf output-image/layer-amd64.tar.gz bin-amd64"
+pe "tar tf output-image/layer-amd64.tar.gz"
+pe 'layer_checksum_amd=$(shasum -a 256 output-image/layer-amd64.tar.gz | cut -d" " -f1)'
+pe "layer_size_amd=\$(wc -c output-image/layer-amd64.tar.gz | awk '{print \$1}')"
+pe 'echo $layer_checksum_amd $layer_size_amd'
 pe 'mkdir -p output-image/blobs/sha256'
-pe 'mv output-image/layer.tar.gz output-image/blobs/sha256/$layer_checksum'
-pe "# Layer blob is ready and named properly!"
-pe 'ls output-image/blobs/sha256'
-pe '# Creating the config blob!'
-pe "$(<config-command)"
-pe 'config_checksum=$(shasum -a 256 output-image/config.json | cut -d" " -f1)'
-pe "config_size=\$(wc -c output-image/config.json | awk '{print \$1}')"
-pe 'mv output-image/config.json output-image/blobs/sha256/$config_checksum'
-pe 'ls output-image/blobs/sha256/$config_checksum'
-pe '# Creating the manifest blob!'
-pe "$(<manifest-command)"
-pe 'manifest_checksum=$(shasum -a 256 output-image/manifest.json | cut -d" " -f1)'
-pe "manifest_size=\$(wc -c output-image/manifest.json | awk '{print \$1}')"
-pe 'mv output-image/manifest.json output-image/blobs/sha256/$manifest_checksum'
+pe 'mv output-image/layer-amd64.tar.gz output-image/blobs/sha256/$layer_checksum_amd'
+pe "# amd64: Layer blob is ready and named properly!"
+pe 'ls output-image/blobs/sha256/$layer_checksum_amd'
+
+pe "# arm64: Creating the layer"
+pe "tar cf output-image/layer-arm64.tar.gz bin-arm64"
+pe "tar tf output-image/layer-arm64.tar.gz"
+pe 'layer_checksum_arm=$(shasum -a 256 output-image/layer-arm64.tar.gz | cut -d" " -f1)'
+pe "layer_size_arm=\$(wc -c output-image/layer-arm64.tar.gz | awk '{print \$1}')"
+pe 'echo $layer_checksum_arm $layer_size_arm'
+pe 'mkdir -p output-image/blobs/sha256'
+pe 'mv output-image/layer-arm64.tar.gz output-image/blobs/sha256/$layer_checksum_arm'
+pe "# arm64: Layer blob is ready and named properly!"
+pe 'ls output-image/blobs/sha256/$layer_checksum_arm'
+
+pe '# amd64: Creating the config blob!'
+pe "os=linux arch=amd64 path=/bin/amd64 entrypoint=/bin-amd64/hello layer_checksum=\$layer_checksum_amd $(<config-command)"
+pe 'config_checksum_amd=$(shasum -a 256 output-image/config.json | cut -d" " -f1)'
+pe "config_size_amd=\$(wc -c output-image/config.json | awk '{print \$1}')"
+pe 'mv output-image/config.json output-image/blobs/sha256/$config_checksum_amd'
+pe 'ls output-image/blobs/sha256/$config_checksum_amd'
+
+pe '# arm64: Creating the config blob!'
+pe "os=linux arch=arm64 path=/bin/arm64 entrypoint=/bin-arm64/hello layer_checksum=\$layer_checksum_arm $(<config-command)"
+pe 'config_checksum_arm=$(shasum -a 256 output-image/config.json | cut -d" " -f1)'
+pe "config_size_arm=\$(wc -c output-image/config.json | awk '{print \$1}')"
+pe 'mv output-image/config.json output-image/blobs/sha256/$config_checksum_arm'
+pe 'ls output-image/blobs/sha256/$config_checksum_arm'
+
+pe '# amd64: Creating the manifest blob!'
+pe "config_checksum=\$config_checksum_amd config_size=\$config_size_amd layer_checksum=\$layer_checksum_amd layer_size=\$layer_size_amd $(<manifest-command)"
+pe 'manifest_checksum_amd=$(shasum -a 256 output-image/manifest.json | cut -d" " -f1)'
+pe "manifest_size_amd=\$(wc -c output-image/manifest.json | awk '{print \$1}')"
+pe 'mv output-image/manifest.json output-image/blobs/sha256/$manifest_checksum_amd'
+
+pe '# arm64: Creating the manifest blob!'
+pe "config_checksum=\$config_checksum_arm config_size=\$config_size_arm layer_checksum=\$layer_checksum_arm layer_size=\$layer_size_arm $(<manifest-command)"
+pe 'manifest_checksum_arm=$(shasum -a 256 output-image/manifest.json | cut -d" " -f1)'
+pe "manifest_size_arm=\$(wc -c output-image/manifest.json | awk '{print \$1}')"
+pe 'mv output-image/manifest.json output-image/blobs/sha256/$manifest_checksum_arm'
+
+pe '# Creating the image index reference!'
+pe "$(<index-ref-command)"
+pe 'index_checksum=$(shasum -a 256 output-image/index-ref.json | cut -d" " -f1)'
+pe "index_size=\$(wc -c output-image/index-ref.json | awk '{print \$1}')"
+pe 'mv output-image/index-ref.json output-image/blobs/sha256/$index_checksum'
+
+
 pe '# Creating the image index!'
 pe "$(<index-command)"
+
 pe "echo '{\"imageLayoutVersion\":\"1.0.0\"}' > output-image/oci-layout"
+
+pe '# Runing the local registry on Docker'
+just registry
+
 pe '# Pushing the image out to a registry!'
 pe "crane push output-image localhost:5001/output-image"
-pe "# Let's run it!"
-pe "docker run -it --pull always localhost:5001/output-image"
+
+pe "# Let's run amd64!"
+pe "docker run -it --pull always --platform linux/amd64 localhost:5001/output-image"
+
+pe "# Let's run arm64!"
+pe "docker run -it --pull always --platform linux/arm64 localhost:5001/output-image"
